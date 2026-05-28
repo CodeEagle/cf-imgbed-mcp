@@ -1,0 +1,9 @@
+# Local `wrangler dev` runtime vars. Copy to .dev.vars and fill.
+# These OVERRIDE the `vars` block in wrangler.jsonc while running locally.
+# NOT used in production — set production values via `wrangler.jsonc` vars
+# or `wrangler secret put` for sensitive ones.
+
+PUBLIC_BASE_URL=https://img.example.com
+ACCESS_TEAM_DOMAIN=https://your-team.cloudflareaccess.com
+ACCESS_AUD=
+MAX_UPLOAD_BYTES=26214400

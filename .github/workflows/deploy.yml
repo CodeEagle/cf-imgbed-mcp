@@ -1,0 +1,61 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Render wrangler.jsonc from template
+        env:
+          PUBLIC_BASE_URL:    ${{ secrets.PUBLIC_BASE_URL }}
+          ACCESS_TEAM_DOMAIN: ${{ secrets.ACCESS_TEAM_DOMAIN }}
+          ACCESS_AUD:         ${{ secrets.ACCESS_AUD }}
+          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
+          ACCESS_APP_ID:      ${{ secrets.ACCESS_APP_ID }}
+          R2_BUCKET:          ${{ vars.R2_BUCKET || 'imgbed' }}
+          CUSTOM_DOMAIN:      ${{ secrets.CUSTOM_DOMAIN }}
+          MAX_UPLOAD_BYTES:   ${{ vars.MAX_UPLOAD_BYTES || '26214400' }}
+          ALLOWED_ORIGINS:    ${{ vars.ALLOWED_ORIGINS || '*' }}
+        run: |
+          cp wrangler.example.jsonc wrangler.jsonc
+          # Substitute every REPLACE_* / example-com placeholder.
+          sed -i \
+            -e "s|https://img.example.com|$PUBLIC_BASE_URL|g" \
+            -e "s|https://YOUR-TEAM.cloudflareaccess.com|$ACCESS_TEAM_DOMAIN|g" \
+            -e "s|REPLACE_WITH_APPLICATION_AUD_TAG|$ACCESS_AUD|g" \
+            -e "s|REPLACE_WITH_CF_ACCOUNT_ID|$CF_ACCOUNT_ID|g" \
+            -e "s|REPLACE_WITH_ACCESS_APP_ID|$ACCESS_APP_ID|g" \
+            -e "s|\"bucket_name\": \"imgbed\"|\"bucket_name\": \"$R2_BUCKET\"|g" \
+            -e "s|img.example.com|$CUSTOM_DOMAIN|g" \
+            -e "s|\"MAX_UPLOAD_BYTES\":  \"26214400\"|\"MAX_UPLOAD_BYTES\":  \"$MAX_UPLOAD_BYTES\"|g" \
+            -e "s|\"https://your-frontend.example.com,http://localhost:5173\"|\"$ALLOWED_ORIGINS\"|g" \
+            wrangler.jsonc
+          echo "--- rendered wrangler.jsonc ---"
+          cat wrangler.jsonc
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler deploy

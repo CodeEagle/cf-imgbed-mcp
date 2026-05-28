@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cf-imgbed-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // ----- bindings -----
+
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "imgbed"            // change if you used a different bucket name
+    }
+  ],
+
+  // ----- vars (all non-secret) -----
+  // CF_API_TOKEN is set via `wrangler secret put CF_API_TOKEN` (NOT here).
+
+  "vars": {
+    // Public hostname users will hit. Used to build returned image URLs.
+    "PUBLIC_BASE_URL":   "https://img.example.com",
+
+    // Zero Trust team domain: https://<team>.cloudflareaccess.com
+    "ACCESS_TEAM_DOMAIN": "https://YOUR-TEAM.cloudflareaccess.com",
+
+    // Application Audience (AUD) tag from your Access app's overview page.
+    "ACCESS_AUD":        "REPLACE_WITH_APPLICATION_AUD_TAG",
+
+    "MAX_UPLOAD_BYTES":  "26214400",     // 25 MiB
+
+    // For /api/tokens endpoints (token management via worker). Optional —
+    // omit both if you only want manual token mgmt via dashboard/scripts.
+    "CF_ACCOUNT_ID":     "REPLACE_WITH_CF_ACCOUNT_ID",
+    "ACCESS_APP_ID":     "REPLACE_WITH_ACCESS_APP_ID",
+
+    // CORS allowlist (comma-separated origins). Use "*" for no restriction.
+    "ALLOWED_ORIGINS":   "https://your-frontend.example.com,http://localhost:5173"
+  },
+
+  // Custom domain. Set custom_domain=true to have Cloudflare auto-create the
+  // DNS + cert; or comment this block and bind via the dashboard.
+  "routes": [
+    { "pattern": "img.example.com", "custom_domain": true }
+  ]
+}
